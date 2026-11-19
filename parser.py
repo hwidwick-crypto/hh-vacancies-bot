@@ -1,4 +1,47 @@
+import html
+import re
+
 import requests
+
+
+def _strip_html(value):
+    value = html.unescape(value)
+    return re.sub(r"<[^>]+>", "", value).strip()
+
+
+def _poisk_vac_web(rol, area):
+    """Резервный поиск через HTML-страницу HH, если API недоступен."""
+    url = "https://hh.ru/search/vacancy"
+    params = {"text": rol, "area": area, "items_on_page": 50}
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        res = requests.get(url, params=params, headers=headers, timeout=20)
+        res.raise_for_status()
+    except requests.RequestException:
+        return []
+
+    page = res.text
+    starts = [match.start() for match in re.finditer(r'data-qa="vacancy-serp__vacancy"', page)]
+    vacancies = []
+    for index, start in enumerate(starts):
+        end = starts[index + 1] if index + 1 < len(starts) else len(page)
+        card = page[start:end]
+        title_match = re.search(
+            r'data-qa="serp-item__title-text"[^>]*>(.*?)</', card, re.DOTALL
+        )
+        url_match = re.search(
+            r'<a[^>]+data-qa="serp-item__title"[^>]+href="([^"]+)',
+            card,
+            re.DOTALL,
+        )
+        if not title_match or not url_match:
+            continue
+
+        title = _strip_html(title_match.group(1))
+        vacancy_url = html.unescape(url_match.group(1))
+        vacancies.append({"name": title, "alternate_url": vacancy_url, "salary": None})
+
+    return vacancies
 
 
 def poisk_vac(rol, area):
@@ -12,14 +55,18 @@ def poisk_vac(rol, area):
     headers = {
         "User-Agent": "hh-student-bot/1.0 (contact: your_email@yandex.ru)"
     }
-    res = requests.get(url, params=params, headers=headers)
-    # костыль чтобы не вылетало
-    if res.status_code != 200:
+    try:
+        res = requests.get(url, params=params, headers=headers, timeout=20)
+    except requests.RequestException:
         return []
-    data = res.json()
+    if res.status_code != 200:
+        return _poisk_vac_web(rol, area)
+    try:
+        data = res.json()
+    except ValueError:
+        return []
     # print(data)
-    vac = data['items']
-    return vac
+    return data.get('items', [])
 
 
 def sred_zp(vac):

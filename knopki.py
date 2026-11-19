@@ -8,6 +8,7 @@ goroda = [
     ["Екатеринбург", "3"],
     ["Казань", "88"],
     ["Краснодар", "53"],
+    ["Смоленск", "83"],
     ["Вся Россия", "113"]
 ]
 
@@ -23,8 +24,9 @@ def knopki_gorod():
     knopka5 = types.InlineKeyboardButton(text="Казань", callback_data="gorod_88")
     knopka6 = types.InlineKeyboardButton(text="Краснодар", callback_data="gorod_53")
     knopka.add(knopka5, knopka6)
-    knopka7 = types.InlineKeyboardButton(text="Вся Россия", callback_data="gorod_113")
-    knopka.add(knopka7)
+    knopka7 = types.InlineKeyboardButton(text="Смоленск", callback_data="gorod_83")
+    knopka8 = types.InlineKeyboardButton(text="Вся Россия", callback_data="gorod_113")
+    knopka.add(knopka7, knopka8)
     return knopka
 
 
